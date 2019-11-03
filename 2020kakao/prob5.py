@@ -1,40 +1,51 @@
 # https://programmers.co.kr/learn/courses/30/lessons/60061
 
-def solution(n, build_frames):
-    global N
-    N = n
-    built_frames = set()
-    for frame in build_frames:
-        if available(frame, built_frames):
-            if frame[3]:
-                built_frames.add((frame[0], frame[1], frame[2]))
+class Trie:
+    def __init__(self):
+        self.head = {}
+
+    def insert(self, word):
+        cur = self.head
+        for char in word:
+            cur.setdefault(char, {})
+            cur = cur[char]
+        cur["*"] = True
+
+    def query(self, query):
+        cur = self.head
+        count = 0
+        for idx, char in enumerate(query):
+            if char == "?":
+                stack = list(cur.values())
+                for _ in range(len(query) - idx - 1):
+                    tmp = []
+                    for node in stack:
+                        if type(node) is dict:
+                            tmp += node.values()
+                    stack = tmp
+                return sum([1 for item in stack if type(item) is dict and "*" in item])
+            elif char not in cur:
+                return count
             else:
-                built_frames.remove((frame[0], frame[1], frame[2]))
+                cur = cur[char]
 
-    built_frames = [[x, y, z] for x, y, z in built_frames]
-    built_frames.sort(key=lambda x: (x[0], x[1], x[2]))
-    return built_frames
 
-def available(frame, built_frames):
-    x, y, a, b = frame[0], frame[1], frame[2], frame[3]
-    if b:
-        if a:
-            if ((x, y-1, 0) in built_frames or (x+1, y-1, 0) in built_frames) or \
-             ((x - 1, y, 1) in built_frames and (x + 1, y, 1) in built_frames):
-                return True
+def solution(words, queries):
+    trie = Trie()
+    trie_reversed = Trie()
+    maxlen = max([len(q) for q in queries])
+
+    for word in words:
+        if len(word) <= maxlen:
+            trie.insert(word)
+            trie_reversed.insert(word[::-1])
+
+    result = []
+    for query in queries:
+        if query.startswith("?"):
+            result.append(trie_reversed.query(query[::-1]))
         else:
-            if y == 0 or (x - 1, y, 1) in built_frames or (x, y, 1) in built_frames or (x, y - 1, 0) in built_frames:
-                return True
-        return False
+            result.append(trie.query(query))
 
-    else:
-        tmp_frames = built_frames - {(x, y, a)}
-        if a:
-            nexts = [(x-1, y, 1), (x+1, y, 1), (x-1, y, 1), (x+1, y, 0)]
-        else:
-            nexts = [(x-1, y+1, 1), (x, y+1, 1), (x, y+1, 0)]
+    return result
 
-        for x, y, a in nexts:
-            if (x, y, a) in tmp_frames and not available((x, y, a, 1), tmp_frames - {(x, y, a)}):
-                return False
-        return True
